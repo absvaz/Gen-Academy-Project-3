@@ -1,0 +1,188 @@
+{
+  "name": "Status Chat Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "10922386-5ac0-4dfa-b034-f22bf5cece86",
+      "name": "When chat message received",
+      "webhookId": "68b682b0-313e-409d-8a90-36f8bd3d99f5"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/15Ee08C_SycDrWCYfOY1Ms47Via8SXMV88Y1YnZsPZ1s/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1862507848,
+          "mode": "list",
+          "cachedResultName": "snapshots tab",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15Ee08C_SycDrWCYfOY1Ms47Via8SXMV88Y1YnZsPZ1s/edit#gid=1862507848"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "02f62eab-269a-4220-8849-de693da88d02",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bWrkqv6JYXrBLS5j",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Builds the full week-over-week picture from saved history.\n// Counting is done here in code, not by the AI model.\nconst rows = $input.all().map(i => i.json);\n\n// One row per task per week (ignores duplicates from re-runs)\nconst seen = new Set();\nconst history = rows\n  .filter(r => r.task_id && r.week)\n  .filter(r => {\n    const k = `${r.task_id}|${r.week}`;\n    if (seen.has(k)) return false;\n    seen.add(k);\n    return true;\n  });\n\nconst weeks = [...new Set(history.map(r => r.week))].sort();\nconst latest = weeks[weeks.length - 1];\nconst ids = [...new Set(history.map(r => r.task_id))].sort();\n\nconst tasks = ids.map(id => {\n  const tl = history\n    .filter(r => r.task_id === id)\n    .sort((a, b) => String(a.week).localeCompare(String(b.week)));\n  const last = tl[tl.length - 1];\n\n  let streak = 0;\n  const entries = [];\n  for (let i = tl.length - 1; i >= 0; i--) {\n    if (tl[i].status === last.status) { streak++; entries.unshift(tl[i]); }\n    else break;\n  }\n  const sprints = [...new Set(entries.map(e => e.sprint))];\n  const stuck =\n    (last.status === 'Blocked' && streak >= 2) ||\n    (last.status === 'In Progress' && streak >= 3);\n\n  return {\n    task_id: id,\n    title: last.title,\n    status: last.status,\n    assignee: last.assignee || 'Unassigned',\n    due_date: last.due_date,\n    weeks_in_status: streak,\n    sprints_spanned: sprints,\n    stuck,\n    stuck_over_one_sprint: stuck && sprints.length > 1,\n    timeline: tl.map(t => `${t.week}: ${t.status}`).join(' | '),\n  };\n});\n\nreturn [{\n  json: {\n    latest_week: latest,\n    weeks_available: weeks,\n    stuck_over_one_sprint: tasks.filter(t => t.stuck_over_one_sprint),\n    stuck_any: tasks.filter(t => t.stuck),\n    tasks,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "7f201992-322c-43af-a5c5-8b106b955799",
+      "name": "Stuck Report"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('When chat message received').first().json.chatInput }}",
+        "options": {
+          "systemMessage": "=You aYou are a project status assistant for the Smart Water Valve project. Answer questions using ONLY the project history data below. All week counts, statuses, and sprint spans are already computed, so never recalculate, estimate, or invent anything. If the data does not contain the answer, say so. Be concise. When an answer is about specific tasks, name the task ID, owner, and number of weeks for each one. If the question is not about tasks, or the data cannot answer it, say so in one sentence and add nothing else.\n\nA task counts as \"stuck\" if it has been Blocked for 2 or more consecutive weeks, or In Progress for 3 or more. \"Stuck for more than one sprint\" means its stuck streak spans more than one sprint (see sprints_spanned).\n\nPROJECT HISTORY DATA:\n{{ JSON.stringify($('Stuck Report').first().json) }}re a helpful assistant"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "910b30f1-7f02-4045-b19d-397eeb99951c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        544,
+        208
+      ],
+      "id": "ec577369-655f-4fa2-9f55-12e56d8a5a63",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        688,
+        208
+      ],
+      "id": "de267e07-d08a-4db6-9c38-5b35fca69b52",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Stuck Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stuck Report": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "4b3fdf5c-13c4-40da-897a-72c1dd04e99f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "96edc31f2959b0783bd80555f2d7a470ea3a0b351522c064c17d0486d4f96c46"
+  },
+  "nodeGroups": [],
+  "id": "NJLtfTDBUhx9RQYS",
+  "tags": []
+}

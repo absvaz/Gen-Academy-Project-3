@@ -1,0 +1,46 @@
+week,task_id,title,status,assignee,due_date,blocked,sprint
+2026-W40,T-001,Define product requirements,In Progress,Sarah,2026-10-15,FALSE,Sprint 2
+2026-W40,T-002,Complete market analysis,In Progress,James,2026-10-17,FALSE,Sprint 2
+2026-W40,T-003,Approve product concept,To Do,Sarah,2026-10-20,FALSE,Sprint 2
+2026-W40,T-004,Develop mechanical design,To Do,Michael,2026-10-30,FALSE,Sprint 2
+2026-W40,T-005,Develop electronics design,To Do,Priya,2026-10-29,FALSE,Sprint 2
+2026-W40,T-006,Build IoT firmware,To Do,David,2026-11-04,FALSE,Sprint 2
+2026-W40,T-007,Select valve supplier,To Do,James,2026-10-18,FALSE,Sprint 2
+2026-W40,T-008,Order prototype components,To Do,Michael,2026-10-22,FALSE,Sprint 2
+2026-W40,T-009,Complete regulatory review,To Do,Priya,2026-10-21,FALSE,Sprint 2
+2026-W40,T-010,Assemble prototype,To Do,,2026-11-06,FALSE,Sprint 2
+2026-W40,T-011,Perform functional testing,To Do,David,2026-11-10,FALSE,Sprint 2
+2026-W40,T-012,Conduct reliability testing,To Do,Michael,2026-11-13,FALSE,Sprint 2
+2026-W40,T-013,Prepare manufacturing plan,To Do,,2026-11-16,FALSE,Sprint 2
+2026-W40,T-014,Complete cost analysis,To Do,James,2026-11-18,FALSE,Sprint 2
+2026-W40,T-015,Final launch readiness review,To Do,Sarah,2026-11-20,FALSE,Sprint 2
+2026-W41,T-001,Define product requirements,Done,Sarah,2026-10-15,FALSE,Sprint 2
+2026-W41,T-002,Complete market analysis,Done,James,2026-10-17,FALSE,Sprint 2
+2026-W41,T-003,Approve product concept,In Progress,Sarah,2026-10-20,FALSE,Sprint 2
+2026-W41,T-004,Develop mechanical design,To Do,Michael,2026-10-30,FALSE,Sprint 2
+2026-W41,T-005,Develop electronics design,To Do,Priya,2026-10-29,FALSE,Sprint 2
+2026-W41,T-006,Build IoT firmware,To Do,David,2026-11-04,FALSE,Sprint 2
+2026-W41,T-007,Select valve supplier,Blocked,James,2026-10-18,TRUE,Sprint 2
+2026-W41,T-008,Order prototype components,To Do,Michael,2026-10-22,FALSE,Sprint 2
+2026-W41,T-009,Complete regulatory review,To Do,Priya,2026-10-21,FALSE,Sprint 2
+2026-W41,T-010,Assemble prototype,To Do,,2026-11-06,FALSE,Sprint 2
+2026-W41,T-011,Perform functional testing,To Do,David,2026-11-10,FALSE,Sprint 2
+2026-W41,T-012,Conduct reliability testing,To Do,Michael,2026-11-13,FALSE,Sprint 2
+2026-W41,T-013,Prepare manufacturing plan,To Do,,2026-11-16,FALSE,Sprint 2
+2026-W41,T-014,Complete cost analysis,To Do,James,2026-11-18,FALSE,Sprint 2
+2026-W41,T-015,Final launch readiness review,To Do,Sarah,2026-11-20,FALSE,Sprint 2
+2026-W42,T-001,Define product requirements,Done,Sarah,2026-10-15,FALSE,Sprint 3
+2026-W42,T-002,Complete market analysis,Done,James,2026-10-17,FALSE,Sprint 3
+2026-W42,T-003,Approve product concept,Done,Sarah,2026-10-20,FALSE,Sprint 3
+2026-W42,T-004,Develop mechanical design,In Progress,Michael,2026-10-30,FALSE,Sprint 3
+2026-W42,T-005,Develop electronics design,In Progress,Priya,2026-10-29,FALSE,Sprint 3
+2026-W42,T-006,Build IoT firmware,To Do,David,2026-11-04,FALSE,Sprint 3
+2026-W42,T-007,Select valve supplier,Blocked,James,2026-10-18,TRUE,Sprint 3
+2026-W42,T-008,Order prototype components,Blocked,Michael,2026-10-22,TRUE,Sprint 3
+2026-W42,T-009,Complete regulatory review,Blocked,Priya,2026-10-21,TRUE,Sprint 3
+2026-W42,T-010,Assemble prototype,To Do,,2026-11-06,FALSE,Sprint 3
+2026-W42,T-011,Perform functional testing,To Do,David,2026-11-10,FALSE,Sprint 3
+2026-W42,T-012,Conduct reliability testing,To Do,Michael,2026-11-13,FALSE,Sprint 3
+2026-W42,T-013,Prepare manufacturing plan,To Do,,2026-11-16,FALSE,Sprint 3
+2026-W42,T-014,Complete cost analysis,To Do,James,2026-11-18,FALSE,Sprint 3
+2026-W42,T-015,Final launch readiness review,To Do,Sarah,2026-11-20,FALSE,Sprint 3

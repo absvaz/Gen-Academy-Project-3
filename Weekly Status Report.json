@@ -1,0 +1,364 @@
+{
+  "name": "Weekly Status Report",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "3b8cfa0f-0f27-4f56-a165-02eb5f9f02c8",
+      "name": "When clicking ‘Execute workflow’",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "operation": "getAll",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "40326ce6-19cb-8033-b257-000b3dcd5ee9",
+          "mode": "list",
+          "cachedResultName": "Project Tasks",
+          "cachedResultUrl": "https://app.notion.com/p/40326ce619cb8098b23fcfffdd87743d"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "a45610f7-380f-4ec8-a587-4982ccd68799",
+      "name": "Get many database pages",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        224,
+        0
+      ],
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "2BRYnES0lxr0p7zd",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Risk flags for each task. Counting happens here, not in the AI model.\nconst TODAY = new Date();\nTODAY.setHours(0, 0, 0, 0);\n\nconst pick = (obj, keys) => {\n  for (const k of keys) {\n    if (obj[k] !== undefined && obj[k] !== null && obj[k] !== '') return obj[k];\n  }\n  return '';\n};\n\nconst toText = (v) => {\n  if (Array.isArray(v)) return v.map(x => (x && x.name) || x).join(', ');\n  if (v && typeof v === 'object') return v.name || '';\n  return String(v || '').trim();\n};\n\nconst toDate = (v) => {\n  if (!v) return null;\n  const s = typeof v === 'object' ? (v.start || '') : String(v);\n  if (!s) return null;\n  const d = new Date(s.slice(0, 10) + 'T00:00:00');\n  return isNaN(d) ? null : d;\n};\n\nreturn $input.all().map(item => {\n  const j = item.json;\n\n  const status   = toText(pick(j, ['property_status']));\n  const assignee = toText(pick(j, ['property_assignee']));\n  const notes    = toText(pick(j, ['property_notes']));\n  const sprint   = toText(pick(j, ['property_sprint']));\n  const due      = toDate(pick(j, ['property_due_date', 'property_date']));\n  const blockedFlag = pick(j, ['property_blocked']);\n\n  const isDone = status === 'Done';\n  const blocked =\n    status === 'Blocked' ||\n    blockedFlag === true || blockedFlag === 'true' ||\n    notes.toUpperCase().includes('BLOCKED');\n\n  const daysToDue = due ? Math.round((due - TODAY) / 86400000) : null;\n  const overdue   = !isDone && due !== null && daysToDue < 0;\n  const unassigned = !isDone && assignee === '';\n  const dueSoon   = !isDone && due !== null && daysToDue >= 0 && daysToDue <= 7;\n\n  const flags = [];\n  if (blocked)    flags.push('BLOCKED');\n  if (overdue)    flags.push('OVERDUE');\n  if (unassigned) flags.push('UNASSIGNED');\n  if (dueSoon)    flags.push('DUE_SOON');\n\n  let risk = 'LOW';\n  if (blocked && overdue) risk = 'HIGH';\n  else if (blocked || overdue || unassigned) risk = 'MEDIUM';\n\n  return {\n    json: {\n      task_id: toText(j.property_task_id),\n      name: j.name,\n      status,\n      assignee: assignee || 'Unassigned',\n      due_date: due ? (() => { const v = pick(j, ['property_due_date', 'property_date']); return String(typeof v === 'object' ? (v.start || '') : v).slice(0, 10); })() : null,\n      sprint,\n      notes,\n      blocked,\n      overdue,\n      days_overdue: overdue ? Math.abs(daysToDue) : 0,\n      unassigned,\n      due_soon: dueSoon,\n      flags,\n      risk_level: risk,\n      url: j.url,\n    },\n  };\n});"
+      },
+      "id": "de04ce8f-ed33-4472-a652-e7575bc35802",
+      "name": "Risk Flags",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/15Ee08C_SycDrWCYfOY1Ms47Via8SXMV88Y1YnZsPZ1s/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1862507848,
+          "mode": "list",
+          "cachedResultName": "snapshots tab",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15Ee08C_SycDrWCYfOY1Ms47Via8SXMV88Y1YnZsPZ1s/edit#gid=1862507848"
+        },
+        "options": {}
+      },
+      "id": "dda203e0-cfd3-4d4b-ae51-94c67c2179ab",
+      "name": "Get row(s) in sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        0
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bWrkqv6JYXrBLS5j",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compares this week's tasks against saved history.\n// All counting is done in code, not by the AI model.\n\n// If you did NOT rename your first Code node, change this to 'Code in JavaScript'\nconst RISK_NODE = 'Risk Flags';\n\nconst history = $input.all().map(i => {\n  const j = i.json;\n  return {\n    week:    j.week    ?? j.property_week,\n    task_id: j.task_id ?? j.property_task_id,\n    status:  j.status  ?? j.property_status,\n    sprint:  j.sprint  ?? j.property_sprint,\n  };\n});\nconst current = $(RISK_NODE).all().map(i => i.json);\n\nfunction isoWeek(date) {\n  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));\n  const dayNum = d.getUTCDay() || 7;\n  d.setUTCDate(d.getUTCDate() + 4 - dayNum);\n  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));\n  const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);\n  return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;\n}\nconst thisWeek = isoWeek(new Date());\n\nreturn current.map(task => {\n  // Past entries for this task, excluding this week so re-runs don't double count\n  const past = history\n    .filter(h => h.task_id === task.task_id && h.week !== thisWeek)\n    .sort((a, b) => String(a.week).localeCompare(String(b.week)));\n\n  const timeline = [\n    ...past.map(h => ({ week: h.week, status: h.status, sprint: h.sprint })),\n    { week: thisWeek, status: task.status, sprint: task.sprint },\n  ];\n\n  // Count consecutive weeks, ending now, with the same status\n  let streak = 0;\n  const streakEntries = [];\n  for (let i = timeline.length - 1; i >= 0; i--) {\n    if (timeline[i].status === task.status) {\n      streak++;\n      streakEntries.unshift(timeline[i]);\n    } else break;\n  }\n\n  const sprints = [...new Set(streakEntries.map(e => e.sprint))];\n  const stuck =\n    (task.status === 'Blocked' && streak >= 2) ||\n    (task.status === 'In Progress' && streak >= 3);\n\n  const flags = [...task.flags];\n  if (stuck) flags.push('STUCK');\n\n  let risk = task.risk_level;\n  if (stuck && risk === 'LOW') risk = 'MEDIUM';\n  if (stuck && task.status === 'Blocked' && task.overdue) risk = 'HIGH';\n\n  return {\n    json: {\n      ...task,\n      week: thisWeek,\n      weeks_in_status: streak,\n      stuck,\n      sprints_spanned: sprints,\n      stuck_over_one_sprint: stuck && sprints.length > 1,\n      flags,\n      risk_level: risk,\n      history: timeline.map(t => `${t.week}: ${t.status}`).join(' | '),\n    },\n  };\n});\n"
+      },
+      "id": "95803328-c251-4751-a146-97f5aac494a6",
+      "name": "Stuck Calc",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Packs all task results into ONE summary object for the report writer.\nconst tasks = $input.all().map(i => i.json);\n\nconst slim = t => ({\n  task_id: t.task_id, name: t.name, status: t.status,\n  assignee: t.assignee, due_date: t.due_date,\n  days_overdue: t.days_overdue, weeks_in_status: t.weeks_in_status,\n  notes: t.notes, flags: t.flags, risk_level: t.risk_level,\n});\n\n// Week-over-week movement, read from each task's history string\nconst moved = [];\nlet doneLastWeek = 0;\nfor (const t of tasks) {\n  const parts = (t.history || '').split(' | ');\n  const prev = parts.length > 1 ? parts[parts.length - 2].split(': ')[1] : null;\n  if (prev === 'Done') doneLastWeek++;\n  if (prev && prev !== t.status) {\n    moved.push({ task_id: t.task_id, name: t.name, from: prev, to: t.status });\n  }\n}\n\nconst count = s => tasks.filter(t => t.status === s).length;\n\nreturn [{\n  json: {\n    week: tasks[0]?.week,\n    report_date: new Date().toISOString().slice(0, 10),\n    total_tasks: tasks.length,\n    status_counts: {\n      done: count('Done'), in_progress: count('In Progress'),\n      blocked: count('Blocked'), to_do: count('To Do'),\n    },\n    done_last_week: doneLastWeek,\n    moved_since_last_week: moved,\n    high_risk: tasks.filter(t => t.risk_level === 'HIGH').map(slim),\n    medium_risk: tasks.filter(t => t.risk_level === 'MEDIUM').map(slim),\n    blocked: tasks.filter(t => t.blocked).map(slim),\n    overdue: tasks.filter(t => t.overdue).map(slim),\n    unassigned: tasks.filter(t => t.unassigned).map(slim),\n    due_within_7_days: tasks.filter(t => t.due_soon).map(slim),\n    stuck_more_than_one_sprint: tasks.filter(t => t.stuck_over_one_sprint).map(slim),\n    stuck_any: tasks.filter(t => t.stuck).map(slim),\n  },\n}];"
+      },
+      "id": "8e23e38a-8483-4e09-8b6e-b3627f50e480",
+      "name": "Prepare Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-5-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a project status reporting assistant for a program manager. Write a concise weekly status report in Markdown from the JSON data provided. Use ONLY the data given. Never recalculate or invent numbers, dates, names, or causes; every count and \"weeks stuck\" value is already computed. If something is not in the data, leave it out.\n\nUse exactly these sections:\n1. Executive Summary (3 sentences max, with an overall health rating: Green, Amber, or Red)\n2. Status Snapshot (table of counts, and change vs last week)\n3. Risk Flags (High, then Medium, each with task ID, owner, and reason)\n4. Blockers (what each is waiting on, and how long)\n5. Stuck for More Than One Sprint\n6. Progress Since Last Week\n7. Recommended Actions (3 to 5, each with a suggested owner)"
+            },
+            {
+              "content": "=Weekly data: {{ JSON.stringify($json, null, 2) }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "f1101060-c662-4492-b707-51bb4fc16f63",
+      "name": "Message a model",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1344,
+        0
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/15Ee08C_SycDrWCYfOY1Ms47Via8SXMV88Y1YnZsPZ1s/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1862507848,
+          "mode": "list",
+          "cachedResultName": "snapshots tab",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15Ee08C_SycDrWCYfOY1Ms47Via8SXMV88Y1YnZsPZ1s/edit#gid=1862507848"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "week": "={{ $json.week }}",
+            "task_id": "={{ $json.task_id }}",
+            "title": "={{ $json.name }}",
+            "status": "={{ $json.status }}",
+            "assignee": "={{ $json.assignee === 'Unassigned' ? '' : $json.assignee }}",
+            "due_date": "={{ $json.due_date }}",
+            "blocked": "={{ $json.blocked }}",
+            "sprint": "={{ $json.sprint }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "week",
+              "displayName": "week",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "task_id",
+              "displayName": "task_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "assignee",
+              "displayName": "assignee",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "due_date",
+              "displayName": "due_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "blocked",
+              "displayName": "blocked",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sprint",
+              "displayName": "sprint",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "26cd6611-9a75-4147-956d-ed36b1858735",
+      "name": "Save Snapshot",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1152,
+        224
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "bWrkqv6JYXrBLS5j",
+          "name": "Google Sheets account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many database pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many database pages": {
+      "main": [
+        [
+          {
+            "node": "Risk Flags",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Risk Flags": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Stuck Calc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stuck Calc": {
+      "main": [
+        [
+          {
+            "node": "Prepare Summary",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Summary": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c7c480f7-7be1-440c-ade2-a82c3f05d59d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "96edc31f2959b0783bd80555f2d7a470ea3a0b351522c064c17d0486d4f96c46"
+  },
+  "nodeGroups": [],
+  "id": "MHJv2yz1ahSeO4Cc",
+  "tags": []
+}

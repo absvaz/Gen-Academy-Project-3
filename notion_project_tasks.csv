@@ -1,0 +1,16 @@
+Name,Task ID,Status,Assignee,Due Date,Blocked,Notes,Sprint
+Define product requirements,T-001,Done,Sarah,2026-10-15,No,Approved,Sprint 3
+Complete market analysis,T-002,Done,James,2026-10-17,No,Complete,Sprint 3
+Approve product concept,T-003,Done,Sarah,2026-10-20,No,Approved,Sprint 3
+Develop mechanical design,T-004,In Progress,Michael,2026-10-30,No,CAD design underway,Sprint 3
+Develop electronics design,T-005,In Progress,Priya,2026-10-29,No,PCB design underway,Sprint 3
+Build IoT firmware,T-006,In Progress,David,2026-11-04,No,Firmware development,Sprint 3
+Select valve supplier,T-007,Blocked,James,2026-10-18,Yes,BLOCKED: Supplier quotation pending,Sprint 3
+Order prototype components,T-008,Blocked,Michael,2026-10-22,Yes,BLOCKED: Waiting for supplier selection,Sprint 3
+Complete regulatory review,T-009,Blocked,Priya,2026-10-21,Yes,BLOCKED: Missing certification documents,Sprint 3
+Assemble prototype,T-010,To Do,,2026-11-06,No,Unassigned,Sprint 3
+Perform functional testing,T-011,To Do,David,2026-11-10,No,Awaiting prototype,Sprint 3
+Conduct reliability testing,T-012,To Do,Michael,2026-11-13,No,Not started,Sprint 3
+Prepare manufacturing plan,T-013,To Do,,2026-11-16,No,Unassigned,Sprint 3
+Complete cost analysis,T-014,To Do,James,2026-11-18,No,Not started,Sprint 3
+Final launch readiness review,T-015,To Do,Sarah,2026-11-20,No,Not started,Sprint 3
